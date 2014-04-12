@@ -30,7 +30,6 @@ $facebook = new Facebook(array(
 
 // Get User ID
 $user = $facebook->getUser();
-
 // We may or may not have this data based on whether the user is logged in.
 //
 // If we have a $user id here, it means we know the user is logged into
@@ -49,22 +48,62 @@ if ($user) {
 
 // Login or logout url will be needed depending on current user state.
 if ($user) { 
-  $sql = "SELECT * 
-		  FROM  `user` 
-		  WHERE user_id =  '".$user_profile['id'];
-	
+
+	$mysqli = $database->connection;
+
+	/* Prepared statement, stage 1: prepare */
+	if (!($stmt = $mysqli->prepare("SELECT * FROM `users` WHERE facebookID = ?"))) {
+		echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+	}
+
+	/* Prepared statement, stage 2: bind and execute */
+	if (!$stmt->bind_param("s", $user_profile['id'])) {
+		echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+	}
+
+	if (!$stmt->execute()) {
+		echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+	}
+
+	$stmt->store_result();
+
+	if($stmt->num_rows == 0){
+		/* Prepared statement, stage 1: prepare */
+		if (!($stmt = $mysqli->prepare("INSERT INTO `fbmini`.`users` (`name`,`facebookID`) VALUES(?,?)"))) {
+			echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+		}
+
+		/* Prepared statement, stage 2: bind and execute */
+		if (!$stmt->bind_param("ss", $user_profile['id'],$user_profile['name'])) {
+			echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+		}
+
+		if (!$stmt->execute()) {
+			echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+		}
+
+	}
+
+	/* explicit close recommended */
+	$stmt->close();
+
+/*
+	$sql = "SELECT * 
+		FROM  `user` 
+		WHERE user_id =  '".$user_profile['id'];
+
 	$result = mysql_query($sql,$database->connection);	
 	if(!$result){
 		$sql = "INSERT INTO  `movienet`.`user` (
-				`user_id` ,
-				`name`
+			`user_id` ,
+			`name`
 				)
 				VALUES (
-				'".$user_profile['id']."',  '".$user_profile['name']."'
-				)";
-			
+						'".$user_profile['id']."',  '".$user_profile['name']."'
+				       )";
+
 		$result = mysql_query($sql,$database->connection);
 	}
-	  
+*/
 }
 ?>
